@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card } from '@/components/ui/card'
 import { Alert, AlertDescription } from '@/components/ui/alert'
-import { AlertCircle, Mail, Lock } from 'lucide-react'
+import { AlertCircle, Mail, Lock, Loader2 } from 'lucide-react'
 
 export default function AdminLoginPage() {
   const router = useRouter()
@@ -28,128 +28,98 @@ export default function AdminLoginPage() {
         body: JSON.stringify({ email, password }),
       })
 
-      const data = await response.json()
+      // Check if response is JSON before parsing to avoid "Unexpected token <" errors
+      const contentType = response.headers.get("content-type");
+      let data = {};
+      if (contentType && contentType.includes("application/json")) {
+        data = await response.json();
+      }
 
       if (!response.ok) {
-        setError(data.error || 'Login failed')
+        setError((data as any).error || 'Invalid credentials or server error')
         return
       }
 
+      // 1. Refresh the router to update server-side auth state
+      router.refresh()
+      
+      // 2. Redirect to dashboard
       router.push('/admin/dashboard')
+      
+      // 3. Fallback: If router.push hangs, force a hard redirect
+      setTimeout(() => {
+        window.location.href = '/admin/dashboard'
+      }, 1000)
+
     } catch (err) {
-      setError('An error occurred during login')
-      console.error(err)
+      setError('Check your internet connection or server status')
+      console.error('Login error:', err)
     } finally {
       setLoading(false)
     }
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-background to-accent/5 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
       <motion.div
-        initial={{ opacity: 0, scale: 0.95 }}
-        animate={{ opacity: 1, scale: 1 }}
-        transition={{ duration: 0.3 }}
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
       >
-        <Card className="w-full max-w-md p-8 border border-border/50 shadow-2xl">
-          {/* Header */}
+        <Card className="w-[400px] p-8 shadow-xl">
           <div className="text-center mb-8">
-            <motion.div
-              initial={{ opacity: 0, y: -20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.1 }}
-            >
-              <h1 className="text-3xl font-bold text-foreground mb-2">Admin Portal</h1>
-              <p className="text-foreground/60">Manage digital profiles and QR codes</p>
-            </motion.div>
+            <h1 className="text-2xl font-bold">Admin Portal</h1>
+            <p className="text-muted-foreground text-sm">Sign in to manage your system</p>
           </div>
 
-          {/* Error Alert */}
           {error && (
-            <motion.div
-              initial={{ opacity: 0, y: -10 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="mb-6"
-            >
-              <Alert variant="destructive">
-                <AlertCircle className="h-4 w-4" />
-                <AlertDescription>{error}</AlertDescription>
-              </Alert>
-            </motion.div>
+            <Alert variant="destructive" className="mb-6">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
           )}
 
-          {/* Login Form */}
           <form onSubmit={handleLogin} className="space-y-4">
-            <motion.div
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: 0.2 }}
-            >
-              <label className="block text-sm font-medium text-foreground mb-2">
-                Email Address
-              </label>
+            <div className="space-y-2">
               <div className="relative">
-                <Mail className="absolute left-3 top-3 w-5 h-5 text-foreground/40" />
+                <Mail className="absolute left-3 top-3 w-4 h-4 text-muted-foreground" />
                 <Input
                   type="email"
-                  placeholder="admin@example.com"
+                  placeholder="Email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   className="pl-10"
                   required
+                  disabled={loading}
                 />
               </div>
-            </motion.div>
+            </div>
 
-            <motion.div
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: 0.3 }}
-            >
-              <label className="block text-sm font-medium text-foreground mb-2">
-                Password
-              </label>
+            <div className="space-y-2">
               <div className="relative">
-                <Lock className="absolute left-3 top-3 w-5 h-5 text-foreground/40" />
+                <Lock className="absolute left-3 top-3 w-4 h-4 text-muted-foreground" />
                 <Input
                   type="password"
-                  placeholder="••••••••"
+                  placeholder="Password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   className="pl-10"
                   required
+                  disabled={loading}
                 />
               </div>
-            </motion.div>
+            </div>
 
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.4 }}
-              className="pt-2"
-            >
-              <Button
-                type="submit"
-                disabled={loading}
-                className="w-full"
-                size="lg"
-              >
-                {loading ? 'Logging in...' : 'Login'}
-              </Button>
-            </motion.div>
+            <Button type="submit" className="w-full" disabled={loading}>
+              {loading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Authenticating...
+                </>
+              ) : (
+                'Login'
+              )}
+            </Button>
           </form>
-
-          {/* Footer */}
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.5 }}
-            className="mt-8 pt-8 border-t border-border/50 text-center"
-          >
-            <p className="text-sm text-foreground/60">
-              Use your admin credentials to access the dashboard
-            </p>
-          </motion.div>
         </Card>
       </motion.div>
     </div>
