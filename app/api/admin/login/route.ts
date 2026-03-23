@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { loginAdmin, setAdminSession } from '@/lib/auth'
+import { cookies } from 'next/headers'
+import { loginAdmin } from '@/lib/auth'
 
 export async function POST(req: NextRequest) {
   try {
@@ -14,6 +15,8 @@ export async function POST(req: NextRequest) {
 
     const isValid = await loginAdmin(email, password)
 
+    console.log('LOGIN CHECK:', isValid) // ✅ DEBUG
+
     if (!isValid) {
       return NextResponse.json(
         { error: 'Invalid email or password' },
@@ -21,7 +24,12 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    await setAdminSession()
+    // ✅ SET COOKIE HERE (IMPORTANT FIX)
+    cookies().set('admin', 'true', {
+      httpOnly: true,
+      path: '/',
+      maxAge: 60 * 60 * 24, // 1 day
+    })
 
     return NextResponse.json(
       { message: 'Login successful' },

@@ -1,9 +1,15 @@
 import bcrypt from 'bcryptjs'
 import { cookies } from 'next/headers'
 
+// ================= CONFIG =================
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'admin@example.com'
 const ADMIN_PASSWORD_HASH = process.env.ADMIN_PASSWORD_HASH || ''
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || ''
 
+// ✅ KEEP THIS SAME EVERYWHERE
+export const COOKIE_NAME = 'admin'
+
+// ================= PASSWORD =================
 export async function hashPassword(password: string): Promise<string> {
   const salt = await bcrypt.genSalt(10)
   return bcrypt.hash(password, salt)
@@ -13,37 +19,51 @@ export async function verifyPassword(password: string, hash: string): Promise<bo
   return bcrypt.compare(password, hash)
 }
 
+// ================= LOGIN =================
 export async function loginAdmin(email: string, password: string): Promise<boolean> {
+  console.log('Login attempt:', email)
+
   if (email !== ADMIN_EMAIL) {
+    console.log('Wrong email')
     return false
   }
 
-  // If no hash is set, verify against plain password from env
-  if (!ADMIN_PASSWORD_HASH) {
-    const plainPassword = process.env.ADMIN_PASSWORD || ''
-    return password === plainPassword
+  // ✅ If hashed password exists
+  if (ADMIN_PASSWORD_HASH) {
+    const result = await verifyPassword(password, ADMIN_PASSWORD_HASH)
+    console.log('Hash check:', result)
+    return result
   }
 
-  return verifyPassword(password, ADMIN_PASSWORD_HASH)
+  // ✅ fallback plain password
+  const result = password === ADMIN_PASSWORD
+  console.log('Plain check:', result)
+  return result
 }
 
-export async function setAdminSession(): Promise<void> {
-  const cookieStore = await cookies()
-  cookieStore.set('admin_session', 'true', {
+// ================= SESSION =================
+
+// ✅ SET COOKIE
+export function setAdminSession() {
+  cookies().set(COOKIE_NAME, 'true', {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
     sameSite: 'lax',
+    path: '/',
     maxAge: 60 * 60 * 24 * 7, // 7 days
   })
 }
 
-export async function clearAdminSession(): Promise<void> {
-  const cookieStore = await cookies()
-  cookieStore.delete('admin_session')
+// ✅ CLEAR COOKIE
+export function clearAdminSession() {
+  cookies().set(COOKIE_NAME, '', {
+    path: '/',
+    expires: new Date(0),
+  })
 }
 
-export async function getAdminSession(): Promise<boolean> {
-  const cookieStore = await cookies()
-  const session = cookieStore.get('admin_session')
+// ✅ GET SESSION (SERVER SIDE ONLY)
+export function getAdminSession(): boolean {
+  const session = cookies().get(COOKIE_NAME)
   return session?.value === 'true'
 }

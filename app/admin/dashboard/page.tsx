@@ -36,26 +36,31 @@ export default function AdminDashboard() {
   const [dialogOpen, setDialogOpen] = useState(false)
 
   useEffect(() => {
-    const token = document.cookie
-      .split('; ')
-      .find(row => row.startsWith('admin_token='))
-      ?.split('=')[1]
+    checkAuth()
+  }, [])
 
-    if (!token) {
+  const checkAuth = () => {
+    const cookie = document.cookie
+      .split('; ')
+      .find(row => row.startsWith('admin='))
+
+    if (!cookie) {
       router.push('/admin/login')
       return
     }
 
     fetchProfiles()
-  }, [router])
+  }
 
   const fetchProfiles = async () => {
     try {
       const response = await fetch('/api/profiles')
+
       if (response.status === 401) {
         router.push('/admin/login')
         return
       }
+
       const data = await response.json()
       setProfiles(Array.isArray(data) ? data : [])
     } catch (err) {
@@ -68,6 +73,10 @@ export default function AdminDashboard() {
   const handleLogout = async () => {
     try {
       await fetch('/api/admin/logout', { method: 'POST' })
+
+      // remove cookie manually
+      document.cookie = "admin=; path=/; expires=Thu, 01 Jan 1970 00:00:00 UTC;"
+
       router.push('/admin/login')
     } catch (err) {
       console.error('Logout error:', err)
@@ -97,25 +106,21 @@ export default function AdminDashboard() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-accent/5">
       <div className="max-w-6xl mx-auto p-6">
-        {/* Header */}
+        
         <div className="flex items-center justify-between mb-8">
           <div>
             <h1 className="text-4xl font-bold text-foreground">Admin Dashboard</h1>
-            <p className="text-foreground/60 mt-2">Manage user profiles and generate QR codes</p>
+            <p className="text-foreground/60 mt-2">
+              Manage user profiles and generate QR codes
+            </p>
           </div>
 
-          <Button
-            onClick={handleLogout}
-            variant="outline"
-            size="lg"
-            className="gap-2"
-          >
+          <Button onClick={handleLogout} variant="outline" size="lg" className="gap-2">
             <LogOut className="w-5 h-5" />
             Logout
           </Button>
         </div>
 
-        {/* Action Buttons */}
         <div className="mb-8">
           <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
             <DialogTrigger asChild>
@@ -124,6 +129,7 @@ export default function AdminDashboard() {
                 Create New Profile
               </Button>
             </DialogTrigger>
+
             <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>Create New Profile</DialogTitle>
@@ -133,11 +139,12 @@ export default function AdminDashboard() {
           </Dialog>
         </div>
 
-        {/* Profiles Grid */}
         <div className="grid gap-6">
           {profiles.length === 0 ? (
             <div className="bg-card border border-border rounded-lg p-12 text-center">
-              <p className="text-foreground/60 text-lg">No profiles yet. Create one to get started.</p>
+              <p className="text-foreground/60 text-lg">
+                No profiles yet. Create one to get started.
+              </p>
             </div>
           ) : (
             profiles.map((profile) => (
@@ -150,6 +157,7 @@ export default function AdminDashboard() {
             ))
           )}
         </div>
+
       </div>
     </div>
   )
