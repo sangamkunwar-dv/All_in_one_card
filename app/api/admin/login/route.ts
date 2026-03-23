@@ -1,10 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { cookies } from 'next/headers'
 import { loginAdmin } from '@/lib/auth'
 
 export async function POST(req: NextRequest) {
   try {
-    const { email, password } = await req.json()
+    const body = await req.json()
+    const { email, password } = body
+
+    console.log('Request body:', body) // ✅ DEBUG
 
     if (!email || !password) {
       return NextResponse.json(
@@ -24,21 +26,26 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    // ✅ SET COOKIE HERE (IMPORTANT FIX)
-    cookies().set('admin', 'true', {
-      httpOnly: true,
-      path: '/',
-      maxAge: 60 * 60 * 24, // 1 day
-    })
-
-    return NextResponse.json(
+    // ✅ CORRECT WAY TO SET COOKIE
+    const response = NextResponse.json(
       { message: 'Login successful' },
       { status: 200 }
     )
+
+    response.cookies.set('admin', 'true', {
+      httpOnly: true,
+      path: '/',
+      maxAge: 60 * 60 * 24,
+      sameSite: 'lax',
+    })
+
+    return response
+
   } catch (error) {
-    console.error('Login error:', error)
+    console.error('Login error FULL:', error)
+
     return NextResponse.json(
-      { error: 'An error occurred during login' },
+      { error: error instanceof Error ? error.message : 'Server error' }, // ✅ SHOW REAL ERROR
       { status: 500 }
     )
   }

@@ -2,9 +2,9 @@ import bcrypt from 'bcryptjs'
 import { cookies } from 'next/headers'
 
 // ================= CONFIG =================
-const ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'admin@example.com'
+const ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'sangamkunwar48@gmail.com'
 const ADMIN_PASSWORD_HASH = process.env.ADMIN_PASSWORD_HASH || ''
-const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || ''
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'sangam@kunwar124680'
 
 // ✅ KEEP THIS SAME EVERYWHERE
 export const COOKIE_NAME = 'admin'
@@ -16,20 +16,30 @@ export async function hashPassword(password: string): Promise<string> {
 }
 
 export async function verifyPassword(password: string, hash: string): Promise<boolean> {
-  return bcrypt.compare(password, hash)
+  try {
+    return await bcrypt.compare(password, hash)
+  } catch (err) {
+    console.error('Bcrypt error:', err)
+    return false
+  }
 }
 
 // ================= LOGIN =================
 export async function loginAdmin(email: string, password: string): Promise<boolean> {
   console.log('Login attempt:', email)
 
+  if (!email || !password) {
+    console.log('Missing email or password')
+    return false
+  }
+
   if (email !== ADMIN_EMAIL) {
     console.log('Wrong email')
     return false
   }
 
-  // ✅ If hashed password exists
-  if (ADMIN_PASSWORD_HASH) {
+  // ✅ Use hash if exists
+  if (ADMIN_PASSWORD_HASH && ADMIN_PASSWORD_HASH.trim() !== '') {
     const result = await verifyPassword(password, ADMIN_PASSWORD_HASH)
     console.log('Hash check:', result)
     return result
@@ -43,27 +53,40 @@ export async function loginAdmin(email: string, password: string): Promise<boole
 
 // ================= SESSION =================
 
-// ✅ SET COOKIE
+// ❌ DO NOT USE THIS in API anymore (use response.cookies.set instead)
 export function setAdminSession() {
-  cookies().set(COOKIE_NAME, 'true', {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'lax',
-    path: '/',
-    maxAge: 60 * 60 * 24 * 7, // 7 days
-  })
+  try {
+    cookies().set(COOKIE_NAME, 'true', {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      path: '/',
+      maxAge: 60 * 60 * 24 * 7,
+    })
+  } catch (err) {
+    console.error('Set cookie error:', err)
+  }
 }
 
-// ✅ CLEAR COOKIE
+// ✅ CLEAR COOKIE (used in logout API)
 export function clearAdminSession() {
-  cookies().set(COOKIE_NAME, '', {
-    path: '/',
-    expires: new Date(0),
-  })
+  try {
+    cookies().set(COOKIE_NAME, '', {
+      path: '/',
+      expires: new Date(0),
+    })
+  } catch (err) {
+    console.error('Clear cookie error:', err)
+  }
 }
 
-// ✅ GET SESSION (SERVER SIDE ONLY)
+// ✅ GET SESSION (SERVER ONLY)
 export function getAdminSession(): boolean {
-  const session = cookies().get(COOKIE_NAME)
-  return session?.value === 'true'
+  try {
+    const session = cookies().get(COOKIE_NAME)
+    return session?.value === 'true'
+  } catch (err) {
+    console.error('Get session error:', err)
+    return false
+  }
 }
